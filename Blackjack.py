@@ -8,7 +8,7 @@ Version History:
     Methods added:
        -PlayerHand.displayHand = displays the player's hand
        -PlayerHand.hit = adds another card to the player's hand
-       -PlayerHand.calcHandTotal = calculates the player's current total (UNDER CONSTRUCTION)
+       -PlayerHand.calcHandTotal = calculates the player's current hand total (W.I.P.) 
 """
 
 import random
@@ -26,37 +26,43 @@ class Deck():
         self.cardType=["Hearts","Spades","Diamonds","Clubs"]
         
     #Choses a number and type for the card to be dealt. Checks if it has already
-    #been dealt (if yes, calls method again). If not, deals it and adds it to
-    #list of dealt cards.
+    #been dealt (if yes, calls method again). If not, deals it to the player's hand
+    #adds it to list of dealt cards, and calculates the player's total.
     def dealCard(self,_Hand):
         self.randCardNum=random.randint(0,12)
         self.randCardType=random.randint(0,3)
-        self.dealtCard=[str(self.cardNum[self.randCardNum]),self.cardType[self.randCardType]]
+        self.dealtCard=[self.cardNum[self.randCardNum],self.cardType[self.randCardType]]
+        #Checks to see if the card has already been dealt
         for card in self.dealtCards:
             if self.dealtCard==card:
-                print("match")
+                #if it has, deals a different card
                 return self.dealCard(_Hand)
+        #if not, adds card to dealt list, the player's hand, and calculates total
         self.dealtCards.append(self.dealtCard)
         _Hand.heldCards.append(self.dealtCard)
+        _Hand.calcHandTotal(self.dealtCard)
         return self.dealtCard
 
 class PlayerHand():
 
-    #On init creates a list for the player's hand
-    def __init__(self):
-        self.heldCards=[]
-
     def displayHand(self):
+        print("In your hand you currently have: ")
         for card in self.heldCards:
-            print(card[0]+" of "+card[1])
+            print(str(card[0])+" of "+card[1])
 
     #Method to take a hit (get another card from the dealer)
     def hit(self,_Deck):
         _Deck.dealCard(self)
 
-    def calcHandTotal(self):
-        # UNDER CONSTRUCTION
-        pass
+    #Calculates the total of the cards in the player's hand
+    def calcHandTotal(self,dealtCard):
+        self.handTotal+=dealtCard[0]
+        ### W.I.P. ###
+        
+    #On init creates a list for the player's hand
+    def __init__(self):
+        self.heldCards=[]
+        self.handTotal=0
 
     
 
