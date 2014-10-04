@@ -19,6 +19,8 @@ Version History:
        -Added GameState class to control game flow
        -Moved all (except __init__ of course) methods from Deck to PlayerHand class
        -PlayerHand now accepts Deck as a property (??? should I inherit???)
+
+1.21 Added Dealer Class and updated game loop to include a dealer
 """
 
 import random
@@ -72,6 +74,11 @@ class PlayerHand():
         self.calcHandTotal(self.dealtCard)
         return self.dealtCard
 
+    def startHand(self):
+        self.hit()
+        self.hit()
+        self.displayHand()
+
     def switchAce(self,flag):
         #Depending on current Ace value, switches between 1 and 11
         if flag==0:
@@ -87,9 +94,12 @@ class PlayerHand():
 
     #Lets the user choose what they want to do
     def userAction(self):
+        print("\n1: Get another card")
+        print("2: Switch an ace's value")
+        print("3: Stay with what you have")
         #Get users choice and make sure its an integer
         try:
-            userChoice=int(input("What would you like to do? "))
+            userChoice=int(input("What would you like to do?  "))
         except ValueError:
             print("Ruh-roh, that didn't seem to be a valid number. Pls try again :)")
             self.userAction()
@@ -129,6 +139,34 @@ class PlayerHand():
         
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class dealerHand(PlayerHand):
+
+    #Display one of the dealer's first two cards
+    def displayHand(self):
+        print("\nThe dealer's hand is showing:")
+        print("\t"+str(self.heldCards[0][0] if self.heldCards[0][0]!=1 else "Ace (?)")+" of "+self.heldCards[0][1])
+
+    #Dealer plays out his hand till 17+ 
+    def playOut(self):
+        if self.hasAce==1:              #if one of first 2 cards is an ace, switch it to 11
+            self.switchAce(self.flag)
+        while self.handTotal<17:        #keep taking cards till total>=17
+            self.hit()
+            if self.hasAce==1 and self.startAce==0 and self.handTotal<12:     #if new card is an ace, switch it if possible
+                self.switchAce(self.flag)
+                self.StartAce=1
+            if self.handTotal>21 and self.hasAce==1 and self.flag==1:
+                self.switchAce(self.flag)
+        
+    def __init__(self,_deck):
+        PlayerHand.__init__(self,_deck,0)
+        self.startHand()
+        self.startAce= 1 if self.hasAce==1 else 0        #Flag for if the dealer gets an ace in his first 2 cards
+        self.playOut()
+        
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         
 
 #Class to manage the state of the game
@@ -153,33 +191,31 @@ class GameState():
         for hand in handList:
             print("\n\t"+("~"*60))
             print("\nAlright Player {}, here are your first two cards.".format(hand.handNum))
-            hand.hit()
-            hand.hit()
-            hand.displayHand()
+            hand.startHand()
             while(hand.handTotal<21 and hand.stay==0):
-                print("\n1: Get another card")
-                print("2: Switch an ace value")
-                print("3: Stay with what you have")
                 hand.userAction()
             if hand.handTotal>21:
                 print("Sorry Player {}, you went over :(\n".format(hand.handNum))
 
     #Once all hands are done, shows totals and checks if they want to play again
-    def EndGame(self,myDeck,handList):
+    def EndGame(self):
          print("\n\t"+("~"*60))
          print("\nThat's all folks! The totals come to:\n")
+         print("Dealer's final total: {}\n".format(self.dealerHand.handTotal if self.dealerHand.handTotal<22 else "BUST"))
          for hand in self.handList:
-            print("Player {}'s total was: {}".format(hand.handNum,hand.handTotal))
-         playAgain=input("\nWould you like to play again? (Y/N)")
+            print("Player {}'s total was: {}".format(hand.handNum,hand.handTotal if hand.handTotal<22 else "BUST"))
+         playAgain=input("\nWould you like to play again? (Y/N)").upper()
          if playAgain=="Y":
+             print("\n"+("#"*30)+" NEW GAME "+("#"*30)+"\n")
              return playAgain
                                   
     def __init__(self):
         self.myDeck=Deck()
         self.numPlayers=self.howManyPlayers()
+        self.dealerHand=dealerHand(self.myDeck)
         self.handList=self.createHands(self.numPlayers,self.myDeck)
         self.GameLoop(self.myDeck,self.handList)
-        self.playAgain=self.EndGame(self.myDeck,self.handList)
+        self.playAgain=self.EndGame()
         
         
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
