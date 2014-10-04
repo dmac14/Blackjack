@@ -15,6 +15,10 @@ Version History:
                              switch an ace value, or stay with current hand.
        -PlayerHand.switchAce=switches the ace value between 1 and 11
        -PlayerHand.winOrLose=method to determine end game comment
+1.2 Re-ordering structure:
+       -Added GameState class to control game flow
+       -Moved all (except __init__ of course) methods from Deck to PlayerHand class
+       -PlayerHand now accepts Deck as a property (??? should I inherit???)
 """
 
 import random
@@ -25,83 +29,48 @@ class Deck():
     #On init creates lists from which cards will be created and a list to track
     #dealt cards.
     def __init__(self):
-        self.cardNum=["Ace"]
+        self.cardNum=[]
         self.dealtCards=[]
-        for num in range(2,11):
+        for num in range(1,11):
             self.cardNum.append(num)
         #for loop for Jack, Queen, and King values (three 10's)
         for i in range (3):
             self.cardNum.append(10)
         self.cardType=["Hearts","Spades","Diamonds","Clubs"]
         
-    #Choses a number and type for the card to be dealt. Checks if it has already
-    #been dealt (if yes, calls method again). If not, deals it to the player's hand
-    #adds it to list of dealt cards, and calculates the player's total.
-    def dealCard(self,_Hand):
-        self.randCardNum=random.randint(0,12)
-        self.randCardType=random.randint(0,3)
-        self.dealtCard=[self.cardNum[self.randCardNum],self.cardType[self.randCardType]]
-        #Checks to see if the card has already been dealt
-        for card in self.dealtCards:
-            if self.dealtCard==card:
-                #if it has, deals a different card
-                return self.dealCard(_Hand)
-        #if not, adds card to dealt list, the player's hand, and calculates total
-        if self.dealtCard[0]=="Ace":
-            print("Your Ace is current valued at 1. You may switch it at your convenience")
-            self.dealtCard[0]=1
-            _Hand.hasAce=1
-        self.dealtCards.append(self.dealtCard)
-        _Hand.heldCards.append(self.dealtCard)
-        _Hand.calcHandTotal(self.dealtCard)
-        return self.dealtCard
-
-    #Lets the user choose what they want to do
-    def userAction(self,_Hand):
-        #Get users choice and make sure its an integer
-        try:
-            userChoice=int(input("What would you like to do? "))
-        except ValueError:
-            print("Ruh-roh, that didn't seem to be a valid number. Pls try again :)")
-            self.userAction(_Hand)
-        #Perform associated action
-        #Deal another card
-        if userChoice==1:
-            self.dealCard(_Hand)
-            _Hand.displayHand()
-        #Switch ace value
-        elif userChoice==2:
-            if _Hand.hasAce==1:
-                _Hand.switchAce(_Hand.flag)
-        #Stay
-        elif userChoice==3:
-            _Hand.stay=1
-        #Choice was an integer but not one of the given options
-        else:
-            print("Ruh-roh, bad choice bud. Try again...")
-            self.userAction(_Hand)
+  
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
 
 class PlayerHand():
 
     def displayHand(self):
         print("\nIn your hand you currently have: ")
         for card in self.heldCards:
-            print(str(card[0])+" of "+card[1])
+            print("\t"+str(card[0] if card[0]!=1 else "Ace ({})".format(1 if self.flag==0 else 11))+" of "+card[1])
         print("Your current total is: "+str(self.handTotal))
-
-    #Determines end of the game peanut gallery comment
-    def winOrLose(self):
-        if self.handTotal>21:
-            print("Whoops Icarus, you went to high :(")
-        elif self.handTotal<21:
-            print("Hey, nice work, you stayed under 21.")
-        else:
-            print("WOW YOU NAILED IT MAN! :D:D:D:D")
-        
-
-    #Method to take a hit (get another card from the dealer)
-    def hit(self,_Deck):
-        _Deck.dealCard(self)
+        if self.hasAce==1:
+            print("You may switch it at your convenience.")
+   
+    #Choses a number and type for the card to be dealt. Checks if it has already
+    #been dealt (if yes, calls method again). If not, deals it to the player's hand
+    #adds it to list of dealt cards, and calculates the player's total.
+    def hit(self):
+        self.randCardNum=random.randint(0,12)
+        self.randCardType=random.randint(0,3)
+        self.dealtCard=[self.Deck.cardNum[self.randCardNum],self.Deck.cardType[self.randCardType]]
+        #Checks to see if the card has already been dealt
+        for card in self.Deck.dealtCards:
+            if self.dealtCard==card:
+                #if it has, deals a different card
+                return self.hit()
+        #if not, adds card to dealt list, the player's hand, and calculates total
+        if self.dealtCard[0]==1:
+            self.hasAce=1
+        self.Deck.dealtCards.append(self.dealtCard)
+        self.heldCards.append(self.dealtCard)
+        self.calcHandTotal(self.dealtCard)
+        return self.dealtCard
 
     def switchAce(self,flag):
         #Depending on current Ace value, switches between 1 and 11
@@ -111,45 +80,118 @@ class PlayerHand():
         else:
             self.handTotal-=10
             self.flag=0
-        ######### WORK IN PROGRESS   ##########
-        
 
     #Calculates the total of the cards in the player's hand
     def calcHandTotal(self,dealtCard):
         self.handTotal+=dealtCard[0]
+
+    #Lets the user choose what they want to do
+    def userAction(self):
+        #Get users choice and make sure its an integer
+        try:
+            userChoice=int(input("What would you like to do? "))
+        except ValueError:
+            print("Ruh-roh, that didn't seem to be a valid number. Pls try again :)")
+            self.userAction()
+        #Perform associated actions...
+        #Deal another card
+        if userChoice==1:
+            self.hit()
+            self.displayHand()
+        #Switch ace value
+        elif userChoice==2:
+            if self.hasAce==1:    #check to see if they have an ace to switch
+                if self.handTotal<12:      #check to see if switching their ace would put them over
+                    self.switchAce(self.flag)
+                    self.displayHand()
+                else:
+                    print("Switching your ace would put you over... not a smart decision")
+            else:
+                print("You don't have an ace to switch... nice try guy")
+        #Stay
+        elif userChoice==3:
+            self.stay=1
+        #Choice was an integer but not one of the given options
+        else:
+            print("Ruh-roh, bad choice bud. Try again...")
+            self.userAction()
         
         
     #On init creates a list for the player's hand
-    def __init__(self):
+    def __init__(self, _deck,_handNum):
         self.heldCards=[]
         self.handTotal=0
         self.stay=0
         self.hasAce=0
         self.flag=0
+        self.Deck=_deck
+        self.handNum=_handNum+1
+        
 
-    
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
 
+#Class to manage the state of the game
+class GameState():
+
+    #Asks the user how many players will be playing
+    def howManyPlayers(self):
+        try:
+            numPlayers=int(input("How many players are there going to be?"))
+        except ValueError:
+            print("Not a valid input")
+            self.howManyPlayers()
+        return numPlayers
+
+    #Creates a list containing the hands of the players
+    def createHands(self,numPlayers,myDeck):
+        handList=[PlayerHand(myDeck,i) for i in range(numPlayers)]
+        return handList
+
+    #Loops through each hand and lets the player play until they stay or are over 21
+    def GameLoop(self,myDeck,handList):
+        for hand in handList:
+            print("\n\t"+("~"*60))
+            print("\nAlright Player {}, here are your first two cards.".format(hand.handNum))
+            hand.hit()
+            hand.hit()
+            hand.displayHand()
+            while(hand.handTotal<21 and hand.stay==0):
+                print("\n1: Get another card")
+                print("2: Switch an ace value")
+                print("3: Stay with what you have")
+                hand.userAction()
+            if hand.handTotal>21:
+                print("Sorry Player {}, you went over :(\n".format(hand.handNum))
+
+    #Once all hands are done, shows totals and checks if they want to play again
+    def EndGame(self,myDeck,handList):
+         print("\n\t"+("~"*60))
+         print("\nThat's all folks! The totals come to:\n")
+         for hand in self.handList:
+            print("Player {}'s total was: {}".format(hand.handNum,hand.handTotal))
+         playAgain=input("\nWould you like to play again? (Y/N)")
+         if playAgain=="Y":
+             return playAgain
+                                  
+    def __init__(self):
+        self.myDeck=Deck()
+        self.numPlayers=self.howManyPlayers()
+        self.handList=self.createHands(self.numPlayers,self.myDeck)
+        self.GameLoop(self.myDeck,self.handList)
+        self.playAgain=self.EndGame(self.myDeck,self.handList)
+        
+        
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 print("Welcome to our humble Blackjack table! Have a seat and we'll get you started :D")
 
-#Create a Deck and PlayerHand objects
-myDeck=Deck()
-myHand=PlayerHand()
-
-#Deal two cards to the player
-print("Alright then, here are your first two cards.")
-myDeck.dealCard(myHand)
-myDeck.dealCard(myHand)
-myHand.displayHand()
-while(myHand.handTotal<21 and myHand.stay==0):
-    print("\n1: Get another card")
-    print("2: Switch an ace value")
-    print("3: Stay with what you have")
-    myDeck.userAction(myHand)
-print("Alright buddy, that's it! Your total comes to:")
-print(myHand.handTotal)
-myHand.winOrLose()
+#Create a GameState object
+playAGame=GameState()
+while playAGame.playAgain=="Y":
+    playAGame=GameState()
+print("\nThanks for playing :D")
 
 
 
